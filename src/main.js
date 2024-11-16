@@ -4,10 +4,9 @@ import iziToast from 'izitoast';
 import 'izitoast/dist/css/iziToast.min.css';
 
 const form = document.querySelector('.search-form');
-const loadMoreBtn = document.querySelector('.load-more');
 const loaderContainer = document.querySelector('.loader-container');
 const loader = document.querySelector('.loader');
-
+const loadMoreBtn = document.querySelector('.load-more');
 let query = '';
 let page = 1;
 
@@ -23,15 +22,17 @@ form.addEventListener('submit', async (event) => {
     return;
   }
 
-  page = 1;
   clearGallery();
-  hideLoadMoreBtn();
+  page = 1;
   showLoader();
+  loadMoreBtn.style.display = 'none';
 
   try {
-    const data = await fetchImages(query, page);
+    const response = await fetchImages(query, page);
     hideLoader();
-    if (data.hits.length === 0) {
+    const images = response.hits; 
+    console.log(images); 
+    if (Array.isArray(images) && images.length === 0) {
       iziToast.error({
         title: 'Error',
         message: 'Sorry, there are no images matching your search query. Please try again!',
@@ -39,8 +40,12 @@ form.addEventListener('submit', async (event) => {
       return;
     }
 
-    renderGallery(data.hits);
-    showLoadMoreBtn();
+    if (Array.isArray(images)) {
+      renderGallery(images);
+      loadMoreBtn.style.display = 'block';
+    } else {
+      console.error('Expected an array but got:', images);
+    }
   } catch (error) {
     hideLoader();
     iziToast.error({
@@ -55,24 +60,25 @@ loadMoreBtn.addEventListener('click', async () => {
   showLoader();
 
   try {
-    const data = await fetchImages(query, page);
+    const response = await fetchImages(query, page);
     hideLoader();
-    renderGallery(data.hits);
-
-    if (page * 15 >= data.totalHits) {
-      hideLoadMoreBtn();
-      iziToast.info({
-        title: 'Info',
+    const images = response.hits; 
+    console.log(images); 
+    if (Array.isArray(images) && images.length === 0) {
+      iziToast.error({
+        title: 'Error',
         message: "We're sorry, but you've reached the end of search results.",
       });
+      loadMoreBtn.style.display = 'none';
+      return;
     }
 
-    // Плавне прокручування сторінки
-    const { height: cardHeight } = document.querySelector('.gallery').firstElementChild.getBoundingClientRect();
-    window.scrollBy({
-      top: cardHeight * 2,
-      behavior: 'smooth',
-    });
+    if (Array.isArray(images)) {
+      renderGallery(images);
+      smoothScroll(); 
+    } else {
+      console.error('Expected an array but got:', images);
+    }
   } catch (error) {
     hideLoader();
     iziToast.error({
@@ -92,10 +98,15 @@ function hideLoader() {
   loaderContainer.style.display = 'none';
 }
 
-function showLoadMoreBtn() {
-  loadMoreBtn.style.display = 'block';
-}
-
-function hideLoadMoreBtn() {
-  loadMoreBtn.style.display = 'none';
+function smoothScroll() {
+  const galleryItem = document.querySelector('.gallery-item');
+  if (galleryItem) {
+    const { height: cardHeight } = galleryItem.getBoundingClientRect();
+    window.scrollBy({
+      top: cardHeight * 2,
+      behavior: 'smooth',
+    });
+  } else {
+    console.error('Gallery item not found');
+  }
 }
