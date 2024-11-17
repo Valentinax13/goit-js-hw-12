@@ -9,6 +9,7 @@ const loader = document.querySelector('.loader');
 const loadMoreBtn = document.querySelector('.load-more');
 let query = '';
 let page = 1;
+let totalHits = 0;
 
 form.addEventListener('submit', async (event) => {
   event.preventDefault();
@@ -24,6 +25,7 @@ form.addEventListener('submit', async (event) => {
 
   clearGallery();
   page = 1;
+  totalHits = 0;
   showLoader();
   loadMoreBtn.style.display = 'none';
 
@@ -31,6 +33,7 @@ form.addEventListener('submit', async (event) => {
     const response = await fetchImages(query, page);
     hideLoader();
     const images = response.hits; 
+    totalHits = response.totalHits; 
     console.log(images); 
     if (Array.isArray(images) && images.length === 0) {
       iziToast.error({
@@ -42,7 +45,9 @@ form.addEventListener('submit', async (event) => {
 
     if (Array.isArray(images)) {
       renderGallery(images);
-      loadMoreBtn.style.display = 'block';
+      if (totalHits > 15) {
+        loadMoreBtn.style.display = 'block';
+      }
     } else {
       console.error('Expected an array but got:', images);
     }
@@ -76,6 +81,13 @@ loadMoreBtn.addEventListener('click', async () => {
     if (Array.isArray(images)) {
       renderGallery(images);
       smoothScroll(); 
+      if (page * 15 >= totalHits) {
+        loadMoreBtn.style.display = 'none';
+        iziToast.info({
+          title: 'Info',
+          message: "We're sorry, but you've reached the end of search results.",
+        });
+      }
     } else {
       console.error('Expected an array but got:', images);
     }
